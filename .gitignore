@@ -8,8 +8,9 @@
 # ignore env
 .env
 
-# ignore data and logs
-data
+# ignore data internal files and logs
+data/*
+!data/.gitignore
 logs
 
 # Ignore IDE specific files
