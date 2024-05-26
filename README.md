@@ -185,3 +185,15 @@ We mainly loop over all the files present in the **data/abn_master_dataset** to 
 
 
 ---
+
+## ERD
+
+ERD Diagram for the Schema mds, which hosts mainly or data.gov.au dataset
+
+![mds_schema](docs/images/firmable_local%20-%20mds.png)
+
+ERD Diagram for the Schema mds, which hosts raw data while ingesting data.gov.au dataset
+
+![raw_schema](docs/images/firmable_local%20-%20raw.png)
+
+---
