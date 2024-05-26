@@ -1,11 +1,12 @@
 # ABN Mining Project
 
-### Use-case
+## Use-case
 There were two main requirements given.
 - Perform data mining on a common crawl dataset for Australian-based websites to pull out ABN numbers.
 - Normalize and store the master ABN dataset provided by data.gov.au. 
 
-### Exact requirement
+## Exact requirement
+
 Get access to common crawl data by going to the latest crawl: https://commoncrawl.org/.
 
 - Find Australian company or organization websites. You should find at least 50,000, but there will be 100’s of thousands.
@@ -20,9 +21,9 @@ Then, access ABN data from here: https://data.gov.au/dataset/ds-dga-5bd7fcab-e31
 
 Your task is to clean, merge, and normalize these data sets as you see fit; we don’t want duplicates.
 
-### Constraints
+## Constraints
 
-#### Mining task
+### Mining task
 - Publicly available index URL(https://index.commoncrawl.org/) and its API does not allow pulling all the records for a given URL pattern, like suppose if we use *.au in the pattern we always get the same number of records (approx 1200).
 	- Lack of Pagination support
 	- Huge file Size even after compression (~ 7.304096 GB)
@@ -31,22 +32,21 @@ Your task is to clean, merge, and normalize these data sets as you see fit; we d
 - Trying to minimize the task run time for mainly parsing the individual S3 key files from the main index file
 - Setting up local PySpark to talk with airflow
 
-#### Gov dataset and Schema design
+### Gov dataset and Schema design
 - Working with XML
 - Lack of knowledge about internal statues like type of individual or nonindividual entity
 - Huge XML files are resource intensive, forcing me to add limit to concurrency
 - Duplicates in 20240515_Public10.xml (648 records)
 
-### Approach
+## Approach
 
-#### Failed Attempt
+### Failed Attempt
 The mining task was clearly calling out the usage of spark (PySpark) to help with all the problems associated with a big file and concurrent processing. But the local spark setup lacked the necessary resources to run the PySpark job from the local airflow setup inside docker.
 
-#### Sticking to Basics
+### Sticking to Basics
 I opted to work with a vanilla python implementation as I think with a bit of tweaking and chunking, we should be able to get the tasks to work inside airflow. I have sued PostgreSQL as the data store for the given project.
 
-
-### Local Setup
+## Local Setup
 
 ### Docker
 We have used Docker for running our local airflow ecosystem. In order to install dependencies we are using custom Dockerfile, here are the steps to get us up and running!
@@ -70,7 +70,7 @@ This is a one-time step, and we don't need to do this again!
 We can use the -d option to run in the background!
 
 
-#### Postgres - Database
+### Postgres - Database
 I was using local Postgres which was outside the docker host, this local Postgres installation can be accessed from the docker host using the host name - **host.docker.internal**.
 Please feel free to create your user and associated password for the given project, keep it handy to be added to airflow admin for connecting airflow with the Postgres data store
 
@@ -82,7 +82,7 @@ For importing the given script, you can either use any psql client or use comman
 **Note:** path to sql file should be absolute
 
 
-#### Airflow Admin
+### Airflow Admin
 
 - Create Connections (Admin -> Connections)
     - AWS
@@ -99,7 +99,7 @@ For importing the given script, you can either use any psql client or use comman
     - Create new pool with the name **limited_simultaneous_pool** with Slots value as 1
         >This pool is used inside ingest_au_gov_data DAG where-in we import data.gov.au ABN data from XML. The XML file were huge and hence the local resources were getting choked if more than 1 file was parsed concurrently!
 
-#### Data Pre-requisites
+### Data Pre-requisites
 We need to have some default directories and data files presents in order for our application to run smoothly
 - Parquet directory
 	We need to have the directory named **parquet** inside the **data** folder, to have the path data/parquet
@@ -111,10 +111,9 @@ We need to have some default directories and data files presents in order for ou
 	While running and examining the records of most of all the given files, there are around 648 records of ABN repeated with exactly the same structure and update date time so it's advisable to just delete them from the raw xml file. Since the execution happened as per the file name, I chose to remove the records from 20240508_Public10.xml file.
 	The cleaned and deduplicated file is present in the [common_gov_records directory](docs/common_gov_records/20240515_Public10_deduplicated.xml), if interested please feel free to look at the code for check_common_records_gov_dataset.py for the underlying implementation in the same directory. Use **20240515_Public10_deduplicated.xml** from the directory. [duplicate_abn_public_10_xml.txt](docs/common_gov_records/duplicate_abn_public_10_xml.txt) holds the human-readable ABN's which were repeated
 
+## DAG
 
-#### DAG
-
-1. ABN Mining DAG (abn_mining.py - **ingest_cmoncrwl_abn_data**)
+### ABN Mining DAG (abn_mining.py - **ingest_cmoncrwl_abn_data**)
 
 The idea is to pull and traverse/parse every **.au* domain available with common crawl website. The problem however was the response of https://index.commoncrawl.org/ API i.e, http://index.commoncrawl.org/CC-MAIN-2024-18-index?url=*.au, the given URL endpoint never lists all the data or even paginated data!
 After a bit of research, I came across an S3 path which holds the list of indexes https://data.commoncrawl.org/cc-index/collections/CC-MAIN-2024-18/indexes/. We can use the AWS command line command like below to get the list of index files which have URLs.
@@ -155,7 +154,10 @@ Here are the steps
 - marked the index file as processed inside **ccrwl_index_2024_18** table
 
 
-2. Ingest data.gov.au ABN Data (ingest_abn_gov_dataset.py - ingest_au_gov_data)
+---
+
+
+### Ingest data.gov.au ABN Data (ingest_abn_gov_dataset.py - ingest_au_gov_data)
 
 So as a prerequisite please look into the Data Prerequisites steps mentioned above to avoid dealing with duplicates, although the duplicate record file is the last one named as **20240508_Public10.xml**.
 The main requirement was to design the schema and also associate records from the given XML file. The structure of the XML file is mentioned in the [attached document](docs/abnlookupbulkextractreadme.pdf). There are still some unknowns about the data dictionary like the <Individual type="XX"></Individual> and <Nonindividual type="XX"></Nonindividual> elements type attribute. Although, I have saved the given attribute but had no clue about its significance. I will upload the associated table ERD soon but here is the rough image of the created dag to upload the data.gov.au data to our database.
@@ -182,3 +184,4 @@ We mainly loop over all the files present in the **data/abn_master_dataset** to 
 	- Move Other Entity Data from **raw.abn_other_entity_bulk_data** to **mds.abn_other_entity**
 
 
+---
