@@ -186,7 +186,33 @@ We mainly loop over all the files present in the **data/abn_master_dataset** to 
 
 ---
 
-## ERD
+## Database
+
+#### Tables
+Schema mds
+
+    - mining_dag_run_stats - Holds the status of the DAG runs and also holds the associated records with respect to an index file
+
+    - ccrwl_index_2024_18 - The list of index file names from common crawl S3 bucket index folder - https://data.commoncrawl.org/cc-index/collections/CC-MAIN-2024-18/indexes/
+    - australian_industries - The list of industries which we look out for in the warc file for marking an associated record with specific industries (master table).
+    - business_type_master - Type of businesses in Australia, taken from business.gov.au reference website - https://abr.business.gov.au/Documentation/ReferenceData (master table).
+
+    - mining_abn_data_raw - Raw data after parsing each warc file, this table has parsed page HTML, ABN, domain_name, URL, business_entity_name. Entity_name needs a bit more work to be parsed exactly!
+    - abn_mining_data - Distinct ABN data from the mining_abn_data_raw table with non-null ABN numbers, This table can be directly connected to abn_data table which is obtained via the data.gov.au website.
+    - abn_mining_industry_mapping - Mapping of the unique ABN data which is obtained via mining to the austalian_industries table.
+
+    - abn_data - Normalized main ABN table created via the data.gov.au website's XML, the source of the table is raw schema's abn_bulk_data table.
+    - abn_dgr - Normalized DGR records associated with the ABN record available on the data.gov.au website's XML, the source of the table is raw schema's abn_dgr_bulk_data table.
+    - abn_other_entity - Normalized Other entity records associated with the ABN record available on the data.gov.au website's XML, the source of the table is raw schema's abn_other_entity_bulk_data table.
+    - entity_master - Normalized entity data, i.e., either business or individual details associated with a specific ABN. Each ABN has an entity_master_id associated with it. The source of the table is raw schema's abn_bulk_data table. 
+
+Schema raw
+
+    abn_bulk_data - Main table which injects an individual ABN record from the data.gov.au website's XML to our database. Acts as the source of the main tables inside mds schema like abn_data and entity_master.
+    abn_dgr_bulk_data - Holds the DGR data associated to the single ABN record, one ABN records could have multiple DGR records as per the data.gov.au website's XML (read more on the attached PDF)
+    abn_other_entity_bulk_data - Holds the Other entity data associated to the single ABN record, one ABN records could have multiple Other entity records as per the data.gov.au website's XML (read more on the attached PDF) 
+
+#### ERD
 
 ERD Diagram for the Schema mds, which hosts mainly or data.gov.au dataset
 
